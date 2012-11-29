@@ -1,14 +1,14 @@
-#include     <stdio.h>
-#include     <stdlib.h> 
-#include     <unistd.h>  
-#include     <sys/types.h>
-#include 	 <libusb.h>
-#include     <sys/stat.h>
-#include     <fcntl.h> 
-#include     <termios.h>
-#include     <errno.h>
-#include	 "function.h"
-#include	 "define.h"
+#include    <stdio.h>
+#include    <stdlib.h> 
+#include    <unistd.h>  
+#include    <sys/types.h>
+#include    <libusb.h>
+#include    <sys/stat.h>
+#include    <fcntl.h> 
+#include    <termios.h>
+#include    <errno.h>
+#include    "function.h"
+#include    "define.h"
 #define DATALEN 0x100
 #define FALSE -1
 #define TRUE 0
@@ -411,7 +411,7 @@ int GET_SNR(unsigned char mode, unsigned char API_halt, unsigned char *snr, unsi
 	if (result != 0)
 		return result;
 	snr[0] = DATA[0];
-	copyData(DATA,0,value,1,4);
+	copyData(DATA,1,value,0,4);
 	return Statue;   
 }
 
