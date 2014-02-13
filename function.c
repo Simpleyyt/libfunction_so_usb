@@ -344,7 +344,7 @@ int API_PCDWrite(unsigned char mode, unsigned char blk_add, unsigned char num_bl
 	DATA[1] = num_blk;
 	DATA[2] = blk_add;
 	copyData(snr,0,DATA,3,6);
-	copyData(buffer,0,DATA,9,num);
+	copyData(buffer,0,DATA,9,num - 9);
 	int result = sendCommand(MF_Write,DATA,num,DATA,&Statue);
 	if (result != 0)
 		return result;
