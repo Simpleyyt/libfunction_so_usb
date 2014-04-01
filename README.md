@@ -15,9 +15,9 @@ For Arm
 
  1. Running the shell:
 
-     export host=arm-linux
-     export CC=arm-linux-gcc
-     make
+         export host=arm-linux
+         export CC=arm-linux-gcc
+         make
 
  2. A library file `libfunction.so` and a `test` program will be generated. 
      
