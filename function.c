@@ -167,7 +167,7 @@ int sendData(void)
 		printf("%02x ",Buffer[i]);
 	printf("\n");
 	
-	if(p<6 || Buffer[0]!=STX || Buffer[p-1]!=ETX || Buffer[2]+5!=p)
+	if(p<6 || (Buffer[0]!=0x02 && Buffer[0]!=STX) || (Buffer[p-1]!=0x03 && Buffer[p-1]!=ETX) || Buffer[2]+5!=p)
 		return 0x05;
 	if (checkData(Buffer,1,p-3) != Buffer[p-2])
 		return 0x02;
