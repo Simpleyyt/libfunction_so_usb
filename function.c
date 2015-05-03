@@ -141,6 +141,17 @@ int writeCom(unsigned char *data, int length)
 	                                  length+8,
 	                                  500);
 
+	if (receive == LIBUSB_ERROR_TIMEOUT)
+	{
+		fprintf (stderr, "writeCom: timed out\n");
+	} else if (receive == LIBUSB_ERROR_PIPE)
+	{
+		fprintf (stderr, "writeCom: request not supported by target\n");
+	} else if (receive == LIBUSB_ERROR_NO_DEVICE)
+	{
+		fprintf (stderr, "writeCom: no device\n");
+	}
+
 	if(receive<0 || receive!=(length + 8))
 	{
 		closeCom();
@@ -153,6 +164,7 @@ int writeCom(unsigned char *data, int length)
 int readCom(unsigned char *data, int length)
 {
 	int receive;
+
 	receive = libusb_control_transfer(devs,
 	                                  LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_IN,
 	                                  LIBUSB_REQUEST_CLEAR_FEATURE,
@@ -161,6 +173,18 @@ int readCom(unsigned char *data, int length)
 	                                  data,
 	                                  DATALEN,
 	                                  500);
+
+	if (receive == LIBUSB_ERROR_TIMEOUT)
+	{
+		fprintf (stderr, "readCom: timed out\n");
+	} else if (receive == LIBUSB_ERROR_PIPE)
+	{
+		fprintf (stderr, "readCom: request not supported by target\n");
+	} else if (receive == LIBUSB_ERROR_NO_DEVICE)
+	{
+		fprintf (stderr, "readCom: no device\n");
+	}
+
 	if(receive<0)
 	{
 		closeCom();
