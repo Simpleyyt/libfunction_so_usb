@@ -1,10 +1,10 @@
 #include    <stdio.h>
-#include    <stdlib.h> 
-#include    <unistd.h>  
+#include    <stdlib.h>
+#include    <unistd.h>
 #include    <sys/types.h>
 #include    <libusb.h>
 #include    <sys/stat.h>
-#include    <fcntl.h> 
+#include    <fcntl.h>
 #include    <termios.h>
 #include    <errno.h>
 #include    "function.h"
@@ -31,7 +31,7 @@ void closeCom(void)
 		fprintf (stderr, "libusb release interface failed\n");
 	}
 
-	libusb_close(devs); 
+	libusb_close(devs);
 	libusb_exit(NULL);
 
 	devs = 0;
@@ -83,7 +83,7 @@ int openCom(void)
 	}
 
 	return TRUE;
-} 
+}
 
 void copyData(unsigned char *s, int spos, unsigned char *d, int dpos, int len)
 {
@@ -97,7 +97,7 @@ int checkData(unsigned char *data, int h, int t)
 {
 	int check;
 	int i;
-	check  = data[h];
+	check = data[h];
 	for (i=h+1;i<=t;i++)
 	{
 		check = check^data[i];
@@ -131,15 +131,16 @@ int writeCom(unsigned char *data, int length)
 {
 	int receive;
 	data[6] = length;
-	receive = libusb_control_transfer(  
-		devs,  
-        LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_OUT,
-        LIBUSB_REQUEST_SET_CONFIGURATION,
-        0x301,
-        0,
-        data,
-        length+8,
-        500);  
+
+	receive = libusb_control_transfer(devs,
+	                                  LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_OUT,
+	                                  LIBUSB_REQUEST_SET_CONFIGURATION,
+	                                  0x301,
+	                                  0,
+	                                  data,
+	                                  length+8,
+	                                  500);
+
 	if(receive<0 || receive!=(length + 8))
 	{
 		closeCom();
@@ -152,15 +153,14 @@ int writeCom(unsigned char *data, int length)
 int readCom(unsigned char *data, int length)
 {
 	int receive;
-	receive = libusb_control_transfer(  
-        devs,  
-        LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_IN,
-        LIBUSB_REQUEST_CLEAR_FEATURE,
-        0x302,
-        0,
-        data,
-        DATALEN,
-        500);  
+	receive = libusb_control_transfer(devs,
+	                                  LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_IN,
+	                                  LIBUSB_REQUEST_CLEAR_FEATURE,
+	                                  0x302,
+	                                  0,
+	                                  data,
+	                                  DATALEN,
+	                                  500);
 	if(receive<0)
 	{
 		closeCom();
@@ -320,7 +320,7 @@ int  MF_Request( unsigned char inf_mode, unsigned char *buffer)
 	unsigned char DATA[1];
 	if (inf_mode == 0x00)
 		DATA[0] = 0x52;
-	else 
+	else
 		DATA[0] = 0x26;
 		*/
 	int result = sendCommand(REQA,&inf_mode,1,buffer,&Statue);
@@ -409,7 +409,7 @@ int API_PCDInitVal(unsigned char mode, unsigned char SectNum, unsigned char *snr
 	if (result != 0)
 		return result;
 	copyData(DATA,0,snr,0,4);
-	return Statue;          
+	return Statue;
 }
 
 
@@ -427,7 +427,7 @@ int  API_PCDDec(unsigned char mode, unsigned char SectNum, unsigned char *snr,  
 		return result;
 	copyData(DATA,0,snr,0,4);
 	copyData(DATA,4,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 int  API_PCDInc(unsigned char   mode, unsigned char SectNum, unsigned char *snr, unsigned char *value)
@@ -443,7 +443,7 @@ int  API_PCDInc(unsigned char   mode, unsigned char SectNum, unsigned char *snr,
 		return result;
 	copyData(DATA,0,snr,0,4);
 	copyData(DATA,4,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 int GET_SNR(unsigned char mode, unsigned char API_halt, unsigned char *snr, unsigned char*value)
@@ -457,7 +457,7 @@ int GET_SNR(unsigned char mode, unsigned char API_halt, unsigned char *snr, unsi
 		return result;
 	snr[0] = DATA[0];
 	copyData(DATA,1,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 
@@ -472,7 +472,7 @@ int MF_Restore(unsigned char mode, int cardlength, unsigned char*carddata )
 	int result = sendCommand(ISO14443_TypeA_Transfer_Command,DATA,num,carddata,&Statue);
 	if (result != 0)
 		return result;
-	return Statue;   
+	return Statue;
 }
 
 
@@ -482,7 +482,7 @@ int RequestType_B(unsigned char *buffer)
 	int result = sendCommand(ReqB,NULL,0,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue;   
+	return Statue;
 }
 
 
@@ -492,7 +492,7 @@ int AntiType_B(unsigned char *buffer)
 	int result = sendCommand(AnticollB,NULL,0,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -502,7 +502,7 @@ int SelectType_B(unsigned char*SerialNum)
 	int result = sendCommand(Attrib_TypeB,SerialNum,4,SerialNum,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -512,7 +512,7 @@ int Request_AB(unsigned char* buffer)
 	int result = sendCommand(Rst_TypeB,buffer,4,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -525,7 +525,7 @@ int  API_ISO14443TypeBTransCOSCmd(unsigned char *cmd,  int cmdSize, unsigned cha
 	int result = sendCommand(ISO14443_TypeB_Transfer_Command,buffer,cmdSize+1,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -542,7 +542,7 @@ int  API_ISO15693_Inventory(unsigned char flag, unsigned char afi, unsigned char
 		return result;
 	*nrOfCard = DATA[0];
 	copyData(DATA,1,pBuffer,0,8*DATA[0]);
-	return Statue; 
+	return Statue;
 }
 
 
@@ -563,7 +563,7 @@ int  API_ISO15693Read(unsigned char flags, unsigned char blk_add, unsigned char 
 	int result = sendCommand(ISO15693_Read,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -586,7 +586,7 @@ int  API_ISO15693Write(unsigned char flags, unsigned char blk_add, unsigned char
 	int result = sendCommand(ISO15693_Write,DATA,num,data,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -606,7 +606,7 @@ int API_ISO15693Lock(unsigned char flags, unsigned char num_blk, unsigned char *
 	int result = sendCommand(ISO15693_Lockblock,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -619,7 +619,7 @@ int API_ISO15693StayQuiet(unsigned char flags, unsigned char *uid, unsigned char
 	int result = sendCommand(ISO15693_StayQuiet,DATA,9,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -632,7 +632,7 @@ int API_ISO15693Select(unsigned char flags, unsigned char *uid, unsigned char *b
 	int result = sendCommand(ISO15693_Select,DATA,9,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -651,7 +651,7 @@ int API_ResetToReady(unsigned char flags, unsigned char *uid, unsigned char *buf
 	int result = sendCommand(ISO15693_Resetready,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -671,7 +671,7 @@ int  API_WriteAFI(unsigned char flags, unsigned char afi, unsigned char *uid, un
 	int result = sendCommand(ISO15693_Write_Afi,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -690,7 +690,7 @@ int API_LockAFI(unsigned char flags, unsigned char *uid, unsigned char *buffer)
 	int result = sendCommand(ISO15693_Lock_Afi,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -710,7 +710,7 @@ int API_WriteDSFID(unsigned char flags, unsigned char DSFID, unsigned char *uid,
 	int result = sendCommand(ISO15693_Write_Dsfid,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -729,7 +729,7 @@ int API_LockDSFID(unsigned char flags, unsigned char *uid, unsigned char *buffer
 	int result = sendCommand(ISO15693_Lock_Dsfid,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -748,7 +748,7 @@ int API_ISO15693_GetSysInfo(unsigned char flags, unsigned char *uid, unsigned ch
 	int result = sendCommand(ISO15693_Get_Information,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -769,7 +769,7 @@ int API_ISO15693_GetMulSecurity(unsigned char flags, unsigned char blkAddr, unsi
 	int result = sendCommand(ISO15693_Get_Multiple_Block_Security,DATA,num,pBuffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -782,7 +782,7 @@ int API_ISO15693TransCOSCmd(unsigned char *cmd, int cmdSize, unsigned char *buff
 	int result = sendCommand(ISO15693_Transfer_Command,DATA,cmdSize,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 int	UL_HLRead(unsigned char mode, unsigned char blk_add, unsigned char *snr, unsigned char *buffer)
@@ -796,7 +796,7 @@ int	UL_HLRead(unsigned char mode, unsigned char blk_add, unsigned char *snr, uns
 		return result;
 	copyData(DATA,0,buffer,0,16);
 	copyData(DATA,16,snr,0,7);
-	return Statue; 
+	return Statue;
 }
 
 
@@ -811,7 +811,7 @@ int UL_HLWrite(unsigned char mode, unsigned char blk_add, unsigned char *snr, un
 	int result = sendCommand(CMD_UL_HLWrite,DATA,7,snr,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -823,5 +823,5 @@ int UL_Request(unsigned char mode,unsigned char *snr)
 	int result = sendCommand(CMD_UL_Request,DATA,1,snr,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
