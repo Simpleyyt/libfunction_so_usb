@@ -87,8 +87,7 @@ void clearBuffer(void)
 	Data[0] = 0x01;
 	for (i=1;i<8;i++)
 		Data[i] = 0x00;
-	p = 1;
-	Buffer[0] = STX;
+	p = 0;
 }
 
 int writeCom(unsigned char *data, int length)
@@ -129,11 +128,7 @@ int readCom(unsigned char *data, int length)
 int sendData(void)
 {
 	int length;
-	int BCC;
 	int i;
-	BCC = checkData(Buffer,1, p-1);
-	writeBuffer(BCC);
-	writeBuffer(ETX);
 	
 	printf ("Send data:");
 	for (i=0;i<p;i++)
@@ -177,11 +172,18 @@ int sendData(void)
 int sendCommand(int command,  unsigned char *sDATA, int sDLen,unsigned char *rDATA, int*Statue)
 {
 	int result;
+	int BCC;
+
 	clearBuffer();
+
+	writeBuffer(STX);
 	writeBuffer(0x00);
 	writeBuffer(sDLen+1);
 	writeBuffer(command);
 	writeBuffers(sDATA, sDLen);
+	BCC = checkData(Buffer,1, p-1);
+	writeBuffer(BCC);
+	writeBuffer(ETX);
 
 	result = sendData();
 	
