@@ -24,19 +24,19 @@ int openCom(void)
     result = libusb_init(NULL);
 	if (result < 0)
     {
-        printf("libusb init error!\n");
+        fprintf(stderr, "libusb init error!\n");
 		return FALSE;
     }
     devs = libusb_open_device_with_vid_pid(NULL, PID, VID);
     if( devs==NULL )
     {
-        printf("libusb open failed!\n");
+        fprintf(stderr, "libusb open failed!\n");
         return FALSE;
     }
 	result = libusb_reset_device(devs);
 	if (result != 0)
 	{
-		printf("libusb reset failed!\n");
+		fprintf(stderr, "libusb reset failed!\n");
 		return FALSE;
 	}
     return TRUE;
@@ -132,8 +132,8 @@ int sendData(void)
 	
 	printf ("Send data:");
 	for (i=0;i<p;i++)
-		printf("%02x ",Buffer[i]);
-	printf("\n");
+		fprintf(stderr, "%02x ",Buffer[i]);
+	fprintf(stderr, "\n");
 	
 	if(openCom() == FALSE)
 	{
@@ -141,7 +141,7 @@ int sendData(void)
 		return FALSE;
 	}
 	length = writeCom(Data, p);
-	printf("length send: %02x\n", length);
+	fprintf(stderr, "length send: %02x\n", length);
 	
 	if(length != p)
 		return 0x05;
@@ -150,17 +150,17 @@ int sendData(void)
 	
 	closeCom();
 	
-	printf("length read: %02x\n", length);
+	fprintf(stderr, "length read: %02x\n", length);
 	/*
 	if(length != receive_len)
 		return 0x05;*/
 		
 	p = length;
 	
-	printf("Receive data:");
+	fprintf(stderr, "Receive data:");
 	for (i=0;i<length;i++)
-		printf("%02x ",Buffer[i]);
-	printf("\n");
+		fprintf(stderr, "%02x ",Buffer[i]);
+	fprintf(stderr, "\n");
 	
 	if(p<6 || (Buffer[0]!=0x02 && Buffer[0]!=STX) || (Buffer[p-1]!=0x03 && Buffer[p-1]!=ETX) || Buffer[2]+5!=p)
 		return 0x05;
