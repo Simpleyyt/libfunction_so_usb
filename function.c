@@ -101,9 +101,9 @@ int writeCom(unsigned char *data, int length)
         0x301,
         0,
         data,
-        DATALEN,
+        length+8,
         500);  
-	if(recieve<0 || recieve!=DATALEN)
+	if(recieve<0 || recieve!=(length + 8))
 		return -1;
 	return length;
 }
