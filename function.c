@@ -85,7 +85,7 @@ void clearBuffer(void)
 {
 	int i;
 	Data[0] = 0x01;
-	for (i=0;i<8;i++)
+	for (i=1;i<8;i++)
 		Data[i] = 0x00;
 	p = 1;
 	Buffer[0] = STX;
