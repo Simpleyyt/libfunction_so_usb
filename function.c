@@ -18,36 +18,73 @@ unsigned char *Buffer = &Data[8];
 int p = 1;
 libusb_device_handle *devs;
 
+void closeCom(void)
+{
+	int result;
+
+	if (devs == 0)
+		return;
+
+	result = libusb_release_interface (devs, 0);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb release interface failed\n");
+	}
+
+	libusb_close(devs); 
+	libusb_exit(NULL);
+
+	devs = 0;
+}
+
 int openCom(void)
 {
 	int result;
-    result = libusb_init(NULL);
+
+	if (devs != 0)
+		return TRUE;
+
+	result = libusb_init(NULL);
 	if (result < 0)
-    {
-        fprintf(stderr, "libusb init error!\n");
+	{
+		fprintf(stderr, "libusb init error!\n");
 		return FALSE;
-    }
-    devs = libusb_open_device_with_vid_pid(NULL, PID, VID);
-    if( devs==NULL )
-    {
-        fprintf(stderr, "libusb open failed!\n");
-        return FALSE;
-    }
+	}
+
+	devs = libusb_open_device_with_vid_pid(NULL, PID, VID);
+	if( devs==NULL )
+	{
+		fprintf(stderr, "libusb open failed!\n");
+		return FALSE;
+	}
+
 	result = libusb_reset_device(devs);
 	if (result != 0)
 	{
 		fprintf(stderr, "libusb reset failed!\n");
+		closeCom();
 		return FALSE;
 	}
-    return TRUE;
+
+	result = libusb_set_configuration (devs, 1);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb set configuration failed\n");
+		closecom();
+		return false;
+	}
+
+	result = libusb_claim_interface (devs, 0);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb claim interface failed\n");
+		closecom();
+		return false;
+	}
+
+	return TRUE;
 } 
 
-void closeCom(void)
-{
-	libusb_reset_device(devs);
-	libusb_close(devs); 
-	libusb_exit(NULL);
-}
 void copyData(unsigned char *s, int spos, unsigned char *d, int dpos, int len)
 {
 	int i;
@@ -104,7 +141,11 @@ int writeCom(unsigned char *data, int length)
         length+8,
         500);  
 	if(receive<0 || receive!=(length + 8))
+	{
+		closeCom();
 		return -1;
+	}
+
 	return length;
 }
 
@@ -121,7 +162,11 @@ int readCom(unsigned char *data, int length)
         DATALEN,
         500);  
 	if(receive<0)
+	{
+		closeCom();
 		return -1;
+	}
+
 	return receive-8;
 }
 
@@ -137,7 +182,6 @@ int sendData(void)
 	
 	if(openCom() == FALSE)
 	{
-		closeCom();
 		return FALSE;
 	}
 	length = writeCom(Data, p);
@@ -148,7 +192,6 @@ int sendData(void)
 		
 	length=readCom(Data,248);
 	
-	closeCom();
 	
 	fprintf(stderr, "length read: %02x\n", length);
 	/*
