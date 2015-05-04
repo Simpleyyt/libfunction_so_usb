@@ -70,16 +70,16 @@ int openCom(void)
 	if (result != 0)
 	{
 		fprintf (stderr, "libusb set configuration failed\n");
-		closecom();
-		return false;
+		closeCom();
+		return FALSE;
 	}
 
 	result = libusb_claim_interface (devs, 0);
 	if (result != 0)
 	{
 		fprintf (stderr, "libusb claim interface failed\n");
-		closecom();
-		return false;
+		closeCom();
+		return FALSE;
 	}
 
 	return TRUE;
