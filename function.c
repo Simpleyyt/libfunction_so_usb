@@ -1,10 +1,10 @@
 #include    <stdio.h>
-#include    <stdlib.h> 
-#include    <unistd.h>  
+#include    <stdlib.h>
+#include    <unistd.h>
 #include    <sys/types.h>
 #include    <libusb.h>
 #include    <sys/stat.h>
-#include    <fcntl.h> 
+#include    <fcntl.h>
 #include    <termios.h>
 #include    <errno.h>
 #include    "function.h"
@@ -18,36 +18,73 @@ unsigned char *Buffer = &Data[8];
 int p = 1;
 libusb_device_handle *devs;
 
+void closeCom(void)
+{
+	int result;
+
+	if (devs == 0)
+		return;
+
+	result = libusb_release_interface (devs, 0);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb release interface failed\n");
+	}
+
+	libusb_close(devs);
+	libusb_exit(NULL);
+
+	devs = 0;
+}
+
 int openCom(void)
 {
 	int result;
-    result = libusb_init(NULL);
+
+	if (devs != 0)
+		return TRUE;
+
+	result = libusb_init(NULL);
 	if (result < 0)
-    {
-        printf("libusb init error!\n");
+	{
+		fprintf(stderr, "libusb init error!\n");
 		return FALSE;
-    }
-    devs = libusb_open_device_with_vid_pid(NULL, PID, VID);
-    if( devs==NULL )
-    {
-        printf("libusb open failed!\n");
-        return FALSE;
-    }
+	}
+
+	devs = libusb_open_device_with_vid_pid(NULL, PID, VID);
+	if( devs==NULL )
+	{
+		fprintf(stderr, "libusb open failed!\n");
+		return FALSE;
+	}
+
 	result = libusb_reset_device(devs);
 	if (result != 0)
 	{
-		printf("libusb reset failed!\n");
+		fprintf(stderr, "libusb reset failed!\n");
+		closeCom();
 		return FALSE;
 	}
-    return TRUE;
-} 
 
-void closeCom(void)
-{
-	libusb_reset_device(devs);
-	libusb_close(devs); 
-	libusb_exit(NULL);
+	result = libusb_set_configuration (devs, 1);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb set configuration failed\n");
+		closeCom();
+		return FALSE;
+	}
+
+	result = libusb_claim_interface (devs, 0);
+	if (result != 0)
+	{
+		fprintf (stderr, "libusb claim interface failed\n");
+		closeCom();
+		return FALSE;
+	}
+
+	return TRUE;
 }
+
 void copyData(unsigned char *s, int spos, unsigned char *d, int dpos, int len)
 {
 	int i;
@@ -60,7 +97,7 @@ int checkData(unsigned char *data, int h, int t)
 {
 	int check;
 	int i;
-	check  = data[h];
+	check = data[h];
 	for (i=h+1;i<=t;i++)
 	{
 		check = check^data[i];
@@ -85,87 +122,112 @@ void clearBuffer(void)
 {
 	int i;
 	Data[0] = 0x01;
-	for (i=0;i<8;i++)
+	for (i=1;i<8;i++)
 		Data[i] = 0x00;
-	p = 1;
-	Buffer[0] = STX;
+	p = 0;
 }
 
 int writeCom(unsigned char *data, int length)
 {
-	int recieve;
+	int receive;
 	data[6] = length;
-	recieve = libusb_control_transfer(  
-		devs,  
-        LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_OUT,
-        LIBUSB_REQUEST_SET_CONFIGURATION,
-        0x301,
-        0,
-        data,
-        DATALEN,
-        500);  
-	if(recieve<0 || recieve!=DATALEN)
+
+	receive = libusb_control_transfer(devs,
+	                                  LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_OUT,
+	                                  LIBUSB_REQUEST_SET_CONFIGURATION,
+	                                  0x301,
+	                                  0,
+	                                  data,
+	                                  length+8,
+	                                  500);
+
+	if (receive == LIBUSB_ERROR_TIMEOUT)
+	{
+		fprintf (stderr, "writeCom: timed out\n");
+	} else if (receive == LIBUSB_ERROR_PIPE)
+	{
+		fprintf (stderr, "writeCom: request not supported by target\n");
+	} else if (receive == LIBUSB_ERROR_NO_DEVICE)
+	{
+		fprintf (stderr, "writeCom: no device\n");
+	}
+
+	if(receive<0 || receive!=(length + 8))
+	{
+		closeCom();
 		return -1;
+	}
+
 	return length;
 }
 
 int readCom(unsigned char *data, int length)
 {
-	int recieve;
-	recieve = libusb_control_transfer(  
-        devs,  
-        LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_IN,
-        LIBUSB_REQUEST_CLEAR_FEATURE,
-        0x302,
-        0,
-        data,
-        DATALEN,
-        500);  
-	if(recieve<0)
+	int receive;
+
+	receive = libusb_control_transfer(devs,
+	                                  LIBUSB_RECIPIENT_INTERFACE|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_ENDPOINT_IN,
+	                                  LIBUSB_REQUEST_CLEAR_FEATURE,
+	                                  0x302,
+	                                  0,
+	                                  data,
+	                                  DATALEN,
+	                                  500);
+
+	if (receive == LIBUSB_ERROR_TIMEOUT)
+	{
+		fprintf (stderr, "readCom: timed out\n");
+	} else if (receive == LIBUSB_ERROR_PIPE)
+	{
+		fprintf (stderr, "readCom: request not supported by target\n");
+	} else if (receive == LIBUSB_ERROR_NO_DEVICE)
+	{
+		fprintf (stderr, "readCom: no device\n");
+	}
+
+	if(receive<0)
+	{
+		closeCom();
 		return -1;
-	return recieve-8;
+	}
+
+	return receive-8;
 }
 
 int sendData(void)
 {
 	int length;
-	int BCC;
 	int i;
-	BCC = checkData(Buffer,1, p-1);
-	writeBuffer(BCC);
-	writeBuffer(ETX);
 	
 	printf ("Send data:");
 	for (i=0;i<p;i++)
-		printf("%02x ",Buffer[i]);
-	printf("\n");
+		fprintf(stderr, "%02x ",Buffer[i]);
+	fprintf(stderr, "\n");
 	
 	if(openCom() == FALSE)
 	{
-		closeCom();
 		return FALSE;
 	}
 	length = writeCom(Data, p);
-	printf("length send: %02x\n", length);
+	fprintf(stderr, "length send: %02x\n", length);
 	
 	if(length != p)
 		return 0x05;
 		
 	length=readCom(Data,248);
 	
-	closeCom();
 	
-	printf("length read: %02x\n", length);
+	fprintf(stderr, "length read: %02x\n", length);
 	/*
-	if(length != recieve_len)
+	if(length != receive_len)
 		return 0x05;*/
 		
 	p = length;
 	
-	printf("Recieve data:");
+	fprintf(stderr, "Receive data:");
 	for (i=0;i<length;i++)
-		printf("%02x ",Buffer[i]);
-	printf("\n");
+		fprintf(stderr, "%02x ",Buffer[i]);
+	fprintf(stderr, "\n");
 	
 	if(p<6 || (Buffer[0]!=0x02 && Buffer[0]!=STX) || (Buffer[p-1]!=0x03 && Buffer[p-1]!=ETX) || Buffer[2]+5!=p)
 		return 0x05;
@@ -177,11 +239,18 @@ int sendData(void)
 int sendCommand(int command,  unsigned char *sDATA, int sDLen,unsigned char *rDATA, int*Statue)
 {
 	int result;
+	int BCC;
+
 	clearBuffer();
+
+	writeBuffer(STX);
 	writeBuffer(0x00);
 	writeBuffer(sDLen+1);
 	writeBuffer(command);
 	writeBuffers(sDATA, sDLen);
+	BCC = checkData(Buffer,1, p-1);
+	writeBuffer(BCC);
+	writeBuffer(ETX);
 
 	result = sendData();
 	
@@ -275,7 +344,7 @@ int  MF_Request( unsigned char inf_mode, unsigned char *buffer)
 	unsigned char DATA[1];
 	if (inf_mode == 0x00)
 		DATA[0] = 0x52;
-	else 
+	else
 		DATA[0] = 0x26;
 		*/
 	int result = sendCommand(REQA,&inf_mode,1,buffer,&Statue);
@@ -364,7 +433,7 @@ int API_PCDInitVal(unsigned char mode, unsigned char SectNum, unsigned char *snr
 	if (result != 0)
 		return result;
 	copyData(DATA,0,snr,0,4);
-	return Statue;          
+	return Statue;
 }
 
 
@@ -382,7 +451,7 @@ int  API_PCDDec(unsigned char mode, unsigned char SectNum, unsigned char *snr,  
 		return result;
 	copyData(DATA,0,snr,0,4);
 	copyData(DATA,4,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 int  API_PCDInc(unsigned char   mode, unsigned char SectNum, unsigned char *snr, unsigned char *value)
@@ -398,7 +467,7 @@ int  API_PCDInc(unsigned char   mode, unsigned char SectNum, unsigned char *snr,
 		return result;
 	copyData(DATA,0,snr,0,4);
 	copyData(DATA,4,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 int GET_SNR(unsigned char mode, unsigned char API_halt, unsigned char *snr, unsigned char*value)
@@ -412,7 +481,7 @@ int GET_SNR(unsigned char mode, unsigned char API_halt, unsigned char *snr, unsi
 		return result;
 	snr[0] = DATA[0];
 	copyData(DATA,1,value,0,4);
-	return Statue;   
+	return Statue;
 }
 
 
@@ -427,7 +496,7 @@ int MF_Restore(unsigned char mode, int cardlength, unsigned char*carddata )
 	int result = sendCommand(ISO14443_TypeA_Transfer_Command,DATA,num,carddata,&Statue);
 	if (result != 0)
 		return result;
-	return Statue;   
+	return Statue;
 }
 
 
@@ -437,7 +506,7 @@ int RequestType_B(unsigned char *buffer)
 	int result = sendCommand(ReqB,NULL,0,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue;   
+	return Statue;
 }
 
 
@@ -447,7 +516,7 @@ int AntiType_B(unsigned char *buffer)
 	int result = sendCommand(AnticollB,NULL,0,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -457,7 +526,7 @@ int SelectType_B(unsigned char*SerialNum)
 	int result = sendCommand(Attrib_TypeB,SerialNum,4,SerialNum,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -467,7 +536,7 @@ int Request_AB(unsigned char* buffer)
 	int result = sendCommand(Rst_TypeB,buffer,4,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -480,7 +549,7 @@ int  API_ISO14443TypeBTransCOSCmd(unsigned char *cmd,  int cmdSize, unsigned cha
 	int result = sendCommand(ISO14443_TypeB_Transfer_Command,buffer,cmdSize+1,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -497,7 +566,7 @@ int  API_ISO15693_Inventory(unsigned char flag, unsigned char afi, unsigned char
 		return result;
 	*nrOfCard = DATA[0];
 	copyData(DATA,1,pBuffer,0,8*DATA[0]);
-	return Statue; 
+	return Statue;
 }
 
 
@@ -518,7 +587,7 @@ int  API_ISO15693Read(unsigned char flags, unsigned char blk_add, unsigned char 
 	int result = sendCommand(ISO15693_Read,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -541,7 +610,7 @@ int  API_ISO15693Write(unsigned char flags, unsigned char blk_add, unsigned char
 	int result = sendCommand(ISO15693_Write,DATA,num,data,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -561,7 +630,7 @@ int API_ISO15693Lock(unsigned char flags, unsigned char num_blk, unsigned char *
 	int result = sendCommand(ISO15693_Lockblock,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -574,7 +643,7 @@ int API_ISO15693StayQuiet(unsigned char flags, unsigned char *uid, unsigned char
 	int result = sendCommand(ISO15693_StayQuiet,DATA,9,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -587,7 +656,7 @@ int API_ISO15693Select(unsigned char flags, unsigned char *uid, unsigned char *b
 	int result = sendCommand(ISO15693_Select,DATA,9,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -606,7 +675,7 @@ int API_ResetToReady(unsigned char flags, unsigned char *uid, unsigned char *buf
 	int result = sendCommand(ISO15693_Resetready,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -626,7 +695,7 @@ int  API_WriteAFI(unsigned char flags, unsigned char afi, unsigned char *uid, un
 	int result = sendCommand(ISO15693_Write_Afi,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -645,7 +714,7 @@ int API_LockAFI(unsigned char flags, unsigned char *uid, unsigned char *buffer)
 	int result = sendCommand(ISO15693_Lock_Afi,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -665,7 +734,7 @@ int API_WriteDSFID(unsigned char flags, unsigned char DSFID, unsigned char *uid,
 	int result = sendCommand(ISO15693_Write_Dsfid,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -684,7 +753,7 @@ int API_LockDSFID(unsigned char flags, unsigned char *uid, unsigned char *buffer
 	int result = sendCommand(ISO15693_Lock_Dsfid,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -703,7 +772,7 @@ int API_ISO15693_GetSysInfo(unsigned char flags, unsigned char *uid, unsigned ch
 	int result = sendCommand(ISO15693_Get_Information,DATA,num,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -724,7 +793,7 @@ int API_ISO15693_GetMulSecurity(unsigned char flags, unsigned char blkAddr, unsi
 	int result = sendCommand(ISO15693_Get_Multiple_Block_Security,DATA,num,pBuffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -737,7 +806,7 @@ int API_ISO15693TransCOSCmd(unsigned char *cmd, int cmdSize, unsigned char *buff
 	int result = sendCommand(ISO15693_Transfer_Command,DATA,cmdSize,buffer,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 int	UL_HLRead(unsigned char mode, unsigned char blk_add, unsigned char *snr, unsigned char *buffer)
@@ -751,7 +820,7 @@ int	UL_HLRead(unsigned char mode, unsigned char blk_add, unsigned char *snr, uns
 		return result;
 	copyData(DATA,0,buffer,0,16);
 	copyData(DATA,16,snr,0,7);
-	return Statue; 
+	return Statue;
 }
 
 
@@ -766,7 +835,7 @@ int UL_HLWrite(unsigned char mode, unsigned char blk_add, unsigned char *snr, un
 	int result = sendCommand(CMD_UL_HLWrite,DATA,7,snr,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
 
 
@@ -778,5 +847,5 @@ int UL_Request(unsigned char mode,unsigned char *snr)
 	int result = sendCommand(CMD_UL_Request,DATA,1,snr,&Statue);
 	if (result != 0)
 		return result;
-	return Statue; 
+	return Statue;
 }
